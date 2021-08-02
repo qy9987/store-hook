@@ -1,12 +1,13 @@
-import { isEqual, merge, debounce } from 'lodash-es';
-import type { PluginInstance } from '../type';
+import { isProd } from "../utils";
+import { merge, debounce } from "lodash-es";
+import type { PluginInstance } from "../type";
 /**
  * 获取本地存储仓库
  * @param storename 仓库名
  * @returns 数据对象
  */
 function getStore(storename: string) {
-  return JSON.parse(localStorage.getItem(storename) || '{}');
+  return JSON.parse(localStorage.getItem(storename) || "{}");
 }
 /**
  * 设置仓库存储
@@ -28,25 +29,36 @@ const setModuleState = (state: any, name: string, storename: string) => {
   setStore(lastStore, storename);
 };
 const debounceSetModuleState = debounce(setModuleState, 160);
-const persistPlugin = (persistName: string = 'persistStore'): PluginInstance => {
+const persistPlugin = (
+  persistName: string = "persistStore"
+): PluginInstance => {
   return {
-    initStore({ persist = true, namespace, state }) {
+    initStore(module) {
+      const { persist = true, namespace, state } = module;
+
       if (persist) {
         const store = getStore(persistName);
         merge(state, store[namespace]);
-        if (!isEqual(store[namespace], state)) {
+        // 浅比较
+        if (!Object.is(store[namespace], state)) {
           setModuleState(state, namespace, persistName);
         }
       }
+      if (!isProd) {
+        console.log(`init store module: %c ${namespace}`, "color:#24b2f3");
+      }
+      return [module];
     },
-    setStore({ persist = true, namespace, nextState }) {
+    setStore(module, action) {
+      const { persist = true, namespace, nextState } = module;
       if (persist) {
-        window.addEventListener('beforeunload', () => {
+        window.addEventListener("beforeunload", () => {
           setModuleState(nextState, namespace, persistName);
         });
         debounceSetModuleState(nextState, namespace, persistName);
       }
-    }
+      return [module, action];
+    },
   };
 };
 

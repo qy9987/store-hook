@@ -8,6 +8,7 @@ const loggerPlugin: PluginInstance = {
     console.log(`%c next state`, 'color:#24f373;', module.nextState);
     console.groupEnd();
     console.groupEnd();
+    return [module, action];
   }
 };
 

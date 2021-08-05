@@ -1,5 +1,5 @@
 import { useUnmount } from "ahooks";
-import { getuuid, isProd } from "./utils";
+import { isProd, getuuid } from "./utils";
 import { isEqual } from "lodash-es";
 import { useRef, useState } from "react";
 
@@ -35,11 +35,7 @@ function compose(...funcs: ((...args: any) => any)[]) {
   if (funcs.length === 1) {
     return funcs[0];
   }
-  return funcs.reduce(
-    (a, b) =>
-      (...args) =>
-        b(...a(...args))
-  );
+  return funcs.reduce((a, b) => (...args) => b(...a(...args)));
 }
 export function Store(option: StoreOption) {
   const { plugins = [] } = option;
@@ -77,19 +73,16 @@ export function Store(option: StoreOption) {
       );
     };
     const keys = Object.keys(actions);
-    // 重新绑定 store 方法的this，传入setState方法
     keys.forEach((i) => {
       if (typeof actions[i] === "function" && i !== "setState") {
-        const fn = actions[i].bind(moduleOption);
-        (moduleOption as any)[i] = (...args: any) => {
+        (actions as any)[i] = (...args: any) => {
           actionName = i;
-          fn(...args);
+          moduleOption[i](...args);
+          // actions[i].call(moduleOption, ...args);
         };
       }
     });
 
-    // 返回数据中移除setState
-    const { setState: _s, ...result } = moduleOption;
     // useStore hook
     const useStore = (
       selector?: (module: Omit<M, "namespace" | "persist">) => any
@@ -136,6 +129,6 @@ export function Store(option: StoreOption) {
       }
       return state;
     };
-    return Object.assign(useStore, result as any);
+    return Object.assign(useStore, actions as any);
   };
 }
